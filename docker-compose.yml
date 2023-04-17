@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  my-app:
+    image: nginx:latest
+    ports:
+      - "8080:80"
+
+  cypress:
+    image: cypress/included:7.5.0
+    environment:
+      - DISPLAY=:99
+    depends_on:
+      - my-app
+    volumes:
+      - ./cypress:/e2e
+    entrypoint: /bin/bash
+    command: -c 'Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 & npm run cypress:run'
+
