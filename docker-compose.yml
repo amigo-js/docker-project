@@ -1,19 +1,59 @@
-version: '3.8'
+version: "3"
 
 services:
   my-app:
-    image: nginx:latest
+    build: .
     ports:
-      - "8080:80"
-
+      - "8080:8080"
   cypress:
     image: cypress/included:7.5.0
-    environment:
-      - DISPLAY=:99
-    depends_on:
-      - my-app
-    volumes:
-      - ./cypress:/e2e
-    entrypoint: /bin/bash
-    command: -c 'Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 & npm run cypress:run'
 
+# Example of running Cypress tests with docker-compose and GitHub Actions
+# https://docs.cypress.io/guides/continuous-integration/github-actions#Example-Workflow
+# https://github.com/cypress-io/github-action
+name: Cypress Test Automation
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  cypress-tests:
+    name: Cypress Tests
+    runs-on: ubuntu-latest
+    services:
+      my-app:
+        build:
+          context: .
+          dockerfile: Dockerfile
+        ports:
+          - "8080:8080"
+        command: npm run start
+        env:
+          NODE_ENV: development
+          DEBUG: "my-app:*"
+      cypress:
+        image: cypress/included:7.5.0
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build Docker image
+        run: docker build -t my-image:latest .
+      - name: Start containers
+        run: docker-compose up -d
+      - name: Wait for containers to be ready
+        run: |
+          docker-compose exec -T my-app sh -c "npm install wait-on"
+          docker-compose exec -T cypress wait-on http://my-app:8080
+      - name: Run Cypress tests
+        env:
+          CYPRESS_baseUrl: http://my-app:8080
+        run: |
+          docker-compose exec cypress \
+            npx cypress run \
+              --config baseUrl=$CYPRESS_baseUrl \
+              --browser chrome \
+              --headless \
+              --no-exit
+      - name: Stop and remove containers
+        run: docker-compose down
