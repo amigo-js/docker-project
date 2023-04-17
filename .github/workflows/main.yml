@@ -1,8 +1,16 @@
-image: node:latest
-build-test:
-  stage: build
-  only:
-    - merge_requests
-  script:
-    - npm ci
-    - npm run lint
+name: Run Cypress Test Suite
+on: push
+
+jobs:
+  run-tests:
+    name: Run Cypress tests
+    runs-on: ubuntu-latest
+    container:
+      image: composer:latest
+      volumes:
+        - my-app:/app
+    steps:
+      - name: Running composer install
+        run: composer install
+      - name: Running e2e tests
+        run: .//Users/viktoradamski/GoIT_projects/docker-project integration
